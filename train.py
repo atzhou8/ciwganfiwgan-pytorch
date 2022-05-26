@@ -15,16 +15,16 @@ import csv
 from tqdm import tqdm
 
 class AudioDataSet:
-    def __init__(self, datadir):
+    def __init__(self, datadir, slice_len):
         print("Loading data")
         dir = os.listdir(datadir)
-        x = np.zeros((len(dir), 1, 16384))
+        x = np.zeros((len(dir), 1, slice_len))
         i = 0
         for file in tqdm(dir):
             audio = read(datadir+file)[1]
-            if audio.shape[0] < 16384:
-                audio = np.pad(audio, (0, 16384-audio.shape[0]))
-            audio = audio[:16384]
+            if audio.shape[0] < slice_len:
+                audio = np.pad(audio, (0, slice_len-audio.shape[0]))
+            audio = audio[:slice_len]
             audio = audio.astype(np.float32)/32767
             audio /= np.max(np.abs(audio))
             x[i, 0, :] = audio
@@ -80,6 +80,12 @@ if __name__ == "__main__":
         default=5000,
         help='Epochs'
     )
+    parser.add_argument(
+        '--slice_len',
+        type=int,
+        default=16384,
+        help='Epochs'
+    )
 
     # Q-net Arguments
     Q_group = parser.add_mutually_exclusive_group()
@@ -100,17 +106,18 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     datadir = args.datadir
     logdir = args.logdir
+    SLICE_LEN = args.slice_len
     NUM_CATEG = args.num_categ
     NUM_EPOCHS = args.num_epochs
     WAVEGAN_DISC_NUPDATES = 5
-    BATCH_SIZE = 64
+    BATCH_SIZE = 16
     LAMBDA = 10
     LEARNING_RATE = 1e-4
     BETA1 = 0.5
     BETA2 = 0.9
 
     # Load data
-    dataset = AudioDataSet(datadir)
+    dataset = AudioDataSet(datadir, SLICE_LEN)
     dataloader = DataLoader(
         dataset,
         BATCH_SIZE,
@@ -120,10 +127,10 @@ if __name__ == "__main__":
     )
 
     # Load models
-    G = WaveGANGenerator().to(device).train()
-    D = WaveGANDiscriminator().to(device).train()
+    G = WaveGANGenerator(slice_len=SLICE_LEN,).to(device).train()
+    D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
     if train_Q:
-        Q = WaveGANQNetwork(num_categ=NUM_CATEG).to(device).train()
+        Q = WaveGANQNetwork(slice_len=SLICE_LEN,num_categ=NUM_CATEG).to(device).train()
 
     # Optimizers
     optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
@@ -147,7 +154,7 @@ if __name__ == "__main__":
             # D Update
             optimizer_D.zero_grad()
             real = real.to(device)
-            epsilon = torch.rand(BATCH_SIZE, 1, 1).repeat(1, 1, 16384).to(device)
+            epsilon = torch.rand(BATCH_SIZE, 1, 1).repeat(1, 1, SLICE_LEN).to(device)
             _z = torch.FloatTensor(BATCH_SIZE, 100-NUM_CATEG).uniform_(-1, 1).to(device)
             c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
             z = torch.cat((c, _z), dim=1)
@@ -188,4 +195,5 @@ if __name__ == "__main__":
 
         torch.save(G.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_G.pt')
         torch.save(D.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_D.pt')
-        torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
+        if train_Q:
+            torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
