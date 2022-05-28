@@ -14,6 +14,7 @@ import argparse
 import csv
 from tqdm import tqdm
 
+
 class AudioDataSet:
     def __init__(self, datadir, slice_len):
         print("Loading data")
@@ -21,11 +22,11 @@ class AudioDataSet:
         x = np.zeros((len(dir), 1, slice_len))
         i = 0
         for file in tqdm(dir):
-            audio = read(datadir+file)[1]
+            audio = read(datadir + file)[1]
             if audio.shape[0] < slice_len:
-                audio = np.pad(audio, (0, slice_len-audio.shape[0]))
+                audio = np.pad(audio, (0, slice_len - audio.shape[0]))
             audio = audio[:slice_len]
-            audio = audio.astype(np.float32)/32767
+            audio = audio.astype(np.float32) / 32767
             audio /= np.max(np.abs(audio))
             x[i, 0, :] = audio
             i += 1
@@ -39,6 +40,7 @@ class AudioDataSet:
     def __len__(self):
         return self.len
 
+
 def gradient_penalty(G, D, real, fake, epsilon):
     x_hat = epsilon * real + (1 - epsilon) * fake
     scores = D(x_hat)
@@ -49,9 +51,10 @@ def gradient_penalty(G, D, real, fake, epsilon):
         create_graph=True,
         retain_graph=True
     )[0]
-    grad_norm = grad.view(grad.shape[0], -1).norm(p=2, dim=1) # norm along each batch
+    grad_norm = grad.view(grad.shape[0], -1).norm(p=2, dim=1)  # norm along each batch
     penalty = ((grad_norm - 1) ** 2).unsqueeze(1)
     return penalty
+
 
 if __name__ == "__main__":
     # Training Arguments
@@ -130,7 +133,7 @@ if __name__ == "__main__":
     G = WaveGANGenerator(slice_len=SLICE_LEN,).to(device).train()
     D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
     if train_Q:
-        Q = WaveGANQNetwork(slice_len=SLICE_LEN,num_categ=NUM_CATEG).to(device).train()
+        Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
 
     # Optimizers
     optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
@@ -144,7 +147,7 @@ if __name__ == "__main__":
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
-    step=0
+    step = 0
     for epoch in range(NUM_EPOCHS):
         print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
         print("-----------------------------------------")
@@ -155,7 +158,7 @@ if __name__ == "__main__":
             optimizer_D.zero_grad()
             real = real.to(device)
             epsilon = torch.rand(BATCH_SIZE, 1, 1).repeat(1, 1, SLICE_LEN).to(device)
-            _z = torch.FloatTensor(BATCH_SIZE, 100-NUM_CATEG).uniform_(-1, 1).to(device)
+            _z = torch.FloatTensor(BATCH_SIZE, 100 - NUM_CATEG).uniform_(-1, 1).to(device)
             c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
             z = torch.cat((c, _z), dim=1)
             fake = G(z)
@@ -170,7 +173,7 @@ if __name__ == "__main__":
                 optimizer_G.zero_grad()
                 if train_Q:
                     optimizer_Q.zero_grad()
-                _z = torch.FloatTensor(BATCH_SIZE, 100-NUM_CATEG).uniform_(-1, 1).to(device)
+                _z = torch.FloatTensor(BATCH_SIZE, 100 - NUM_CATEG).uniform_(-1, 1).to(device)
                 c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
                 z = torch.cat((c, _z), dim=1)
                 G_z = G(z)
@@ -180,7 +183,6 @@ if __name__ == "__main__":
                 G_loss.backward(retain_graph=True)
                 writer.add_scalar('Loss/Generator', G_loss.detach().item(), i)
 
-
                 # Q Loss
                 if train_Q:
                     Q_loss = criterion_Q(Q(G_z), c)
@@ -188,10 +190,9 @@ if __name__ == "__main__":
                     writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), i)
                     optimizer_Q.step()
 
-
                 # Update
                 optimizer_G.step()
-            step+=1
+            step += 1
 
         torch.save(G.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_G.pt')
         torch.save(D.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_D.pt')
