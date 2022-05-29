@@ -1,17 +1,14 @@
 import torch
 import numpy as np
 import torch.optim as optim
-import torch.nn.functional as F
 from scipy.io.wavfile import read
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
 from torch.utils.tensorboard import SummaryWriter
 
 import os
-import sys
-import glob
 import argparse
-import csv
+import pickle as pk
 from tqdm import tqdm
 
 
@@ -125,7 +122,7 @@ if __name__ == "__main__":
         dataset,
         BATCH_SIZE,
         shuffle=True,
-        num_workers=6,
+        num_workers=4,
         drop_last=True
     )
 
@@ -194,7 +191,11 @@ if __name__ == "__main__":
                 optimizer_G.step()
             step += 1
 
-        torch.save(G.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_G.pt')
-        torch.save(D.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_D.pt')
-        if train_Q:
-            torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
+        # torch.save(G.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_G.pt')
+        # torch.save(D.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_D.pt')
+        # if train_Q:
+            # torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
+
+    # NOTE: temporary workaround:
+    pk.dump(G, open("generator.pkl", "wb"))
+    pk.dump(D, open("discriminator.pkl", "wb"))
