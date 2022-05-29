@@ -4,24 +4,14 @@ Author: Andrej Leban
 Created on Sun May 29 13:05:27 2022
 """
 
-import copy
-import collections as coll
-import itertools as it
-import functools as ft
-import operator as op
-import os
-import re
-
 import io
 import pickle as pk
 
-
 import soundfile as sf
+import sounddevice as sd
 
 import numpy as np
 import pandas as pd
-import scipy as sp
-import sklearn as sk
 
 import torch
 import torch.nn as net
@@ -39,18 +29,11 @@ class CPU_Unpickler(pk.Unpickler):
 
 if __name__ == "__main__":
 
-    # generator = pk.load(open("generator.pkl", 'rb'))
-
-    # dev = torch.device('cpu')
-    # model = torch.load('generator.pkl', map_location=torch.device("cpu"))
-    # model = torch.load('generator.pkl', map_location=lambda storage, loc: dev)
-
-    # my_model = net.load_state_dict(torch.load('generator.pkl', map_location=torch.device('cpu')))
-
     generator = CPU_Unpickler(open("generator.pkl", 'rb')).load()
 
     discriminator = CPU_Unpickler(open("discriminator.pkl", 'rb')).load()
 
-    # inp, fs = sf.read("../GANdata/8words_train/ask_1.wav")
+    inp, fs = sf.read("../GANdata/8words_train/ask_1.wav")
 
-    genData = generator.cpu()(torch.randn(6000, 100))
+    genData = generator.cpu()(torch.randn(1, 100)).detach().numpy()[0][0]
+    sd.play(genData, fs)
