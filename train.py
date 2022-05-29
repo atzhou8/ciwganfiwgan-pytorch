@@ -84,7 +84,7 @@ if __name__ == "__main__":
         '--slice_len',
         type=int,
         default=16384,
-        help='Epochs'
+        help='Slice length'
     )
 
     # Q-net Arguments

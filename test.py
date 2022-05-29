@@ -16,6 +16,8 @@ import io
 import pickle as pk
 
 
+import soundfile as sf
+
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -48,3 +50,7 @@ if __name__ == "__main__":
     generator = CPU_Unpickler(open("generator.pkl", 'rb')).load()
 
     discriminator = CPU_Unpickler(open("discriminator.pkl", 'rb')).load()
+
+    # inp, fs = sf.read("../GANdata/8words_train/ask_1.wav")
+
+    genData = generator.cpu()(torch.randn(6000, 100))
