@@ -196,6 +196,8 @@ if __name__ == "__main__":
         # if train_Q:
             # torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
 
-    # NOTE: temporary workaround:
-    pk.dump(G, open("generator.pkl", "wb"))
-    pk.dump(D, open("discriminator.pkl", "wb"))
+        # NOTE: temporary workaround:
+        if not os.path.exists("./checkpoints"):
+            os.makedirs("./checkpoints")
+        pk.dump(G, open(os.path.join("./checkpoints", f"generator{epoch}" + ".pkl"), "wb"))
+        pk.dump(D, open(os.path.join("./checkpoints", f"discriminator{epoch}" + ".pkl"), "wb"))
