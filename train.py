@@ -25,7 +25,13 @@ class AudioDataSet:
             if audio.shape[0] < slice_len:
                 audio = np.pad(audio, (0, slice_len-audio.shape[0]))
             audio = audio[:slice_len]
-            audio = audio.astype(np.float32)/32767
+
+            if audio.dtype == np.int16:
+                audio = audio.astype(np.float32)/32767
+            elif audio.dtype == np.float32:
+                pass
+            else:
+                raise NotImplementedError('Scipy cannot process atypical WAV files.')
             audio /= np.max(np.abs(audio))
             x[i, 0, :] = audio
             i += 1
@@ -84,7 +90,13 @@ if __name__ == "__main__":
         '--slice_len',
         type=int,
         default=16384,
-        help='Epochs'
+        help='Length of training data'
+    )
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=64,
+        help='Batch size'
     )
 
     # Q-net Arguments
@@ -110,7 +122,7 @@ if __name__ == "__main__":
     NUM_CATEG = args.num_categ
     NUM_EPOCHS = args.num_epochs
     WAVEGAN_DISC_NUPDATES = 5
-    BATCH_SIZE = 16
+    BATCH_SIZE = args.batch_size
     LAMBDA = 10
     LEARNING_RATE = 1e-4
     BETA1 = 0.5
@@ -193,7 +205,7 @@ if __name__ == "__main__":
                 optimizer_G.step()
             step+=1
 
-        torch.save(G.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_G.pt')
-        torch.save(D.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_D.pt')
+        torch.save(G.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_G.pt')
+        torch.save(D.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_D.pt')
         if train_Q:
-            torch.save(Q.state_dict(), f'./checkpoints/epoch{epoch}_step{step}_Q.pt')
+            torch.save(Q.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_Q.pt')
