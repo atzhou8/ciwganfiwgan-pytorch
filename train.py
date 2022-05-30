@@ -21,7 +21,7 @@ class AudioDataSet:
         x = np.zeros((len(dir), 1, slice_len))
         i = 0
         for file in tqdm(dir):
-            audio = read(datadir+file)[1]
+            audio = read(os.path.join(datadir, file))[1]
             if audio.shape[0] < slice_len:
                 audio = np.pad(audio, (0, slice_len-audio.shape[0]))
             audio = audio[:slice_len]
@@ -205,7 +205,12 @@ if __name__ == "__main__":
                 optimizer_G.step()
             step+=1
 
-        torch.save(G.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_G.pt')
-        torch.save(D.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_D.pt')
+        torch.save(G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_G.pt'))
+        torch.save(D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_D.pt'))
         if train_Q:
-            torch.save(Q.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_Q.pt')
+            torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Q.pt'))
+
+        torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Gopt.pt'))
+        torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Dopt.pt'))
+        if train_Q:
+            torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Qopt.pt'))
