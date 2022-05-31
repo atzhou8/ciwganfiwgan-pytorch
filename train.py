@@ -25,7 +25,7 @@ class AudioDataSet:
             audio = audio[:slice_len]
 
             if audio.dtype == np.int16:
-                audio = audio.astype(np.float32)/32767
+                audio = audio.astype(np.float32) / 32767
             elif audio.dtype == np.float32:
                 pass
             else:
