@@ -1,15 +1,15 @@
-import torch
+import argparse
+import os
+
 import numpy as np
+import torch
 import torch.optim as optim
 from scipy.io.wavfile import read
 from torch.utils.data import DataLoader
-from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
 from torch.utils.tensorboard import SummaryWriter
-
-import os
-import argparse
-import pickle as pk
 from tqdm import tqdm
+
+from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
 
 
 class AudioDataSet:
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     )
 
     # Load models
-    G = WaveGANGenerator(slice_len=SLICE_LEN,).to(device).train()
+    G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
     D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
     if train_Q:
         Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()

@@ -1,19 +1,19 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
 
 
 class UpConv(torch.nn.Module):
     def __init__(
-        self,
-        in_channels,
-        filters,
-        kernel_size=25,
-        stride=4,
-        padding='zeros',
-        upsample='zeros',
-        relu=True,
-        use_batchnorm=False
+            self,
+            in_channels,
+            filters,
+            kernel_size=25,
+            stride=4,
+            padding='zeros',
+            upsample='zeros',
+            relu=True,
+            use_batchnorm=False
     ):
         self.relu = relu
         super(UpConv, self).__init__()
@@ -31,19 +31,19 @@ class UpConv(torch.nn.Module):
         output = self.conv(x)
         output = self.batch_norm(output)
         output = F.relu(output) if self.relu else torch.tanh(output)
-        return(output)
+        return (output)
 
 
 class DownConv(torch.nn.Module):
     def __init__(
-        self,
-        in_channels,
-        filters,
-        kernel_size=25,
-        stride=4,
-        use_batchnorm=False,
-        alpha=0.2,
-        phaseshuffle_rad=0
+            self,
+            in_channels,
+            filters,
+            kernel_size=25,
+            stride=4,
+            use_batchnorm=False,
+            alpha=0.2,
+            phaseshuffle_rad=0
     ):
         super(DownConv, self).__init__()
         self.alpha = alpha
@@ -71,21 +71,21 @@ class DownConv(torch.nn.Module):
         pad_r = np.max(-phase, 0)
         shuffle = torch.nn.ReflectionPad1d((pad_l, pad_r))
         x = shuffle(x)
-        return(x)
+        return (x)
 
 
 class WaveGANGenerator(torch.nn.Module):
     def __init__(
-        self,
-        slice_len=16384,
-        nch=1,
-        kernel_len=25,
-        stride=4,
-        dim=64,
-        use_batchnorm=False,
-        latent_dim=100,
-        upsample='zeros',
-        train=False
+            self,
+            slice_len=16384,
+            nch=1,
+            kernel_len=25,
+            stride=4,
+            dim=64,
+            use_batchnorm=False,
+            latent_dim=100,
+            upsample='zeros',
+            train=False
     ):
         assert slice_len in [16384, 65536]
         self.slice_len = slice_len
@@ -177,18 +177,18 @@ class WaveGANGenerator(torch.nn.Module):
         output = self.upconv4(output)
         if self.slice_len == 65536:
             output = self.upconv5(output)
-        return(output)
+        return (output)
 
 
 class WaveGANDiscriminator(torch.nn.Module):
     def __init__(
-        self,
-        kernel_len=25,
-        dim=64,
-        stride=4,
-        use_batchnorm=False,
-        phaseshuffle_rad=2,
-        slice_len=16384,
+            self,
+            kernel_len=25,
+            dim=64,
+            stride=4,
+            use_batchnorm=False,
+            phaseshuffle_rad=2,
+            slice_len=16384,
     ):
         super(WaveGANDiscriminator, self).__init__()
         assert slice_len in [16384, 65536]
@@ -217,14 +217,14 @@ class WaveGANDiscriminator(torch.nn.Module):
 
 class WaveGANQNetwork(WaveGANDiscriminator):
     def __init__(
-        self,
-        num_categ,
-        kernel_len=25,
-        dim=64,
-        stride=4,
-        use_batchnorm=False,
-        phaseshuffle_rad=0,
-        slice_len=16384,
+            self,
+            num_categ,
+            kernel_len=25,
+            dim=64,
+            stride=4,
+            use_batchnorm=False,
+            phaseshuffle_rad=0,
+            slice_len=16384,
     ):
         super(WaveGANQNetwork, self).__init__(
             kernel_len=25,

@@ -7,14 +7,9 @@ Created on Sun May 29 13:05:27 2022
 import io
 import pickle as pk
 
-import soundfile as sf
 import sounddevice as sd
-
-import numpy as np
-import pandas as pd
-
+import soundfile as sf
 import torch
-import torch.nn as net
 
 
 # cf: https://github.com/pytorch/pytorch/issues/16797
@@ -28,7 +23,6 @@ class CPU_Unpickler(pk.Unpickler):
 
 
 if __name__ == "__main__":
-
     generator = CPU_Unpickler(open("generator.pkl", 'rb')).load()
 
     discriminator = CPU_Unpickler(open("discriminator.pkl", 'rb')).load()
