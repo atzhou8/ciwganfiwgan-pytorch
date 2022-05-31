@@ -174,7 +174,7 @@ if __name__ == "__main__":
             penalty = gradient_penalty(G, D, real, fake, epsilon)
 
             D_loss = torch.mean(D(fake) - D(real) + LAMBDA * penalty)
-            writer.add_scalar('Loss/Discriminator', D_loss.detach().item(), i)
+            writer.add_scalar('Loss/Discriminator', D_loss.detach().item(), step)
             D_loss.backward()
             optimizer_D.step()
 
@@ -190,14 +190,14 @@ if __name__ == "__main__":
                 # G Loss
                 G_loss = torch.mean(-D(G_z))
                 G_loss.backward(retain_graph=True)
-                writer.add_scalar('Loss/Generator', G_loss.detach().item(), i)
+                writer.add_scalar('Loss/Generator', G_loss.detach().item(), step)
 
 
                 # Q Loss
                 if train_Q:
                     Q_loss = criterion_Q(Q(G_z), c)
                     Q_loss.backward()
-                    writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), i)
+                    writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), step)
                     optimizer_Q.step()
 
 
