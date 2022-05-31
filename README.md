@@ -6,15 +6,15 @@ This is a PyTorch implementation of **Categorical Info WaveGAN (ciwGAN)** and **
 
 ### Training WaveGAN
 ```
-python train.py --datadir './training_data/' --logdir './log_directory/'
+python train.py --datadir training_directory --logdir log_directory
 ```
 
 ### Training ciwGAN
 ```
-python train.py --ciw --num_categ N --datadir './training_data/' --logdir './log_directory/'
+python train.py --ciw --num_categ N --datadir training_directory --logdir log_directory
 ```
 
 ### Training fiwGAN
 ```
-python train.py --fiw --num_categ N --datadir './training_data/' --logdir './log_directory/'
+python train.py --fiw --num_categ N --datadir training_directory --logdir log_directory
 ```

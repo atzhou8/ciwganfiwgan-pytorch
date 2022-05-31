@@ -19,7 +19,7 @@ class AudioDataSet:
         x = np.zeros((len(dir), 1, slice_len))
         i = 0
         for file in tqdm(dir):
-            audio = read(datadir + file)[1]
+            audio = read(os.path.join(datadir, file))[1]
             if audio.shape[0] < slice_len:
                 audio = np.pad(audio, (0, slice_len - audio.shape[0]))
             audio = audio[:slice_len]
@@ -176,7 +176,7 @@ if __name__ == "__main__":
             penalty = gradient_penalty(G, D, real, fake, epsilon)
 
             D_loss = torch.mean(D(fake) - D(real) + LAMBDA * penalty)
-            writer.add_scalar('Loss/Discriminator', D_loss.detach().item(), i)
+            writer.add_scalar('Loss/Discriminator', D_loss.detach().item(), step)
             D_loss.backward()
             optimizer_D.step()
 
@@ -192,13 +192,13 @@ if __name__ == "__main__":
                 # G Loss
                 G_loss = torch.mean(-D(G_z))
                 G_loss.backward(retain_graph=True)
-                writer.add_scalar('Loss/Generator', G_loss.detach().item(), i)
+                writer.add_scalar('Loss/Generator', G_loss.detach().item(), step)
 
                 # Q Loss
                 if train_Q:
                     Q_loss = criterion_Q(Q(G_z), c)
                     Q_loss.backward()
-                    writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), i)
+                    writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), step)
                     optimizer_Q.step()
 
                 # Update
@@ -212,7 +212,12 @@ if __name__ == "__main__":
         #     pk.dump(G, open(os.path.join("./checkpoints", f"generator{epoch}" + ".pkl"), "wb"))
         #     pk.dump(D, open(os.path.join("./checkpoints", f"discriminator{epoch}" + ".pkl"), "wb"))
 
-        torch.save(G.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_G.pt')
-        torch.save(D.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_D.pt')
+        torch.save(G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_G.pt'))
+        torch.save(D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_D.pt'))
         if train_Q:
-            torch.save(Q.state_dict(), f'./{logdir}/epoch{epoch}_step{step}_Q.pt')
+            torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Q.pt'))
+
+        torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Gopt.pt'))
+        torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Dopt.pt'))
+        if train_Q:
+            torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Qopt.pt'))
