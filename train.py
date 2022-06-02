@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-from builtins import map
 
 import numpy as np
 import torch
@@ -102,10 +101,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        '--continue',
+        '--cont',
         type=str,
         default="",
-        help='''Continue: default from the last saved iteration. No if not desired.'''
+        help='''continue: default from the last saved iteration. No if not desired.'''
              '''Provide the epoch number if you wish to resume from a specific point'''
     )
 
@@ -138,8 +137,7 @@ if __name__ == "__main__":
     BETA1 = 0.5
     BETA2 = 0.9
 
-    CONT = args.
-    continue
+    CONT = args.cont
 
     # Load data
     dataset = AudioDataSet(datadir, SLICE_LEN)
@@ -263,13 +261,6 @@ if __name__ == "__main__":
                 # Update
                 optimizer_G.step()
             step += 1
-
-        # NOTE: temporary workaround:
-        # if not epoch % 100:
-        #     if not os.path.exists("./checkpoints"):
-        #         os.makedirs("./checkpoints")
-        #     pk.dump(G, open(os.path.join("./checkpoints", f"generator{epoch}" + ".pkl"), "wb"))
-        #     pk.dump(D, open(os.path.join("./checkpoints", f"discriminator{epoch}" + ".pkl"), "wb"))
 
         torch.save(G.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_G.pt'))
         torch.save(D.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_D.pt'))
