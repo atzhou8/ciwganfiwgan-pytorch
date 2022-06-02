@@ -108,6 +108,13 @@ if __name__ == "__main__":
              '''Provide the epoch number if you wish to resume from a specific point'''
     )
 
+    parser.add_argument(
+    '--save_int',
+    type=int,
+    default=50,
+    help='Save interval in epochs'
+    )
+
     # Q-net Arguments
     Q_group = parser.add_mutually_exclusive_group()
     Q_group.add_argument(
@@ -138,6 +145,7 @@ if __name__ == "__main__":
     BETA2 = 0.9
 
     CONT = args.cont
+    SAVE_INT = args.save_int
 
     # Load data
     dataset = AudioDataSet(datadir, SLICE_LEN)
@@ -226,8 +234,8 @@ if __name__ == "__main__":
     writer = SummaryWriter(logdir)
     step = 0
 
-    for maxEpoch in range(NUM_EPOCHS):
-        print("Epoch {} of {}".format(maxEpoch, NUM_EPOCHS))
+    for epoch in range(NUM_EPOCHS):
+        print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
         real = dataset[:BATCH_SIZE].to(device)
@@ -273,12 +281,13 @@ if __name__ == "__main__":
                 optimizer_G.step()
             step += 1
 
-        torch.save(G.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_G.pt'))
-        torch.save(D.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_D.pt'))
-        if train_Q:
-            torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Q.pt'))
+        if not epoch % SAVE_INT:
+            torch.save(G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_G.pt'))
+            torch.save(D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_D.pt'))
+            if train_Q:
+                torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Q.pt'))
 
-        torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Gopt.pt'))
-        torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Dopt.pt'))
-        if train_Q:
-            torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Qopt.pt'))
+            torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Gopt.pt'))
+            torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Dopt.pt'))
+            if train_Q:
+                torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Qopt.pt'))
