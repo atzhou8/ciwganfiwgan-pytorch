@@ -155,7 +155,9 @@ if __name__ == "__main__":
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
         # Optimizers
         optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))\
+
+        Q, optimizer_Q, criterion_Q = (None, None, None)
         if train_Q:
             Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
         if args.fiw:
