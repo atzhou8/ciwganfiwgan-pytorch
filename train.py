@@ -149,18 +149,15 @@ if __name__ == "__main__":
         drop_last=True
     )
 
-    # Load models
-    if CONT.lower() == "no":
+
+    def make_new():
         G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
-
         # Optimizers
         optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
         optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-
         if train_Q:
             Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
-
         if args.fiw:
             optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
             criterion_Q = torch.nn.BCEWithLogitsLoss()
@@ -168,48 +165,60 @@ if __name__ == "__main__":
             optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
             criterion_Q = torch.nn.CrossEntropyLoss()
 
-    else:
-        if CONT == "":
-            # Take last
-            files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
-            epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
-            epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
-            maxEpoch = sorted(epochs, reverse=True, key=int)[0]
+        return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
 
-            fPrefix = f'epoch{maxEpoch}_step'
-            fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
-            # Take first if multiple matches (unlikely)
-            fname = ([f for f in fnames if f is not None][0]).group(1)
-        else:
-            # parametrized by the epoch
-            fPrefix = f'epoch{CONT}_step'
-            files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
-            fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
-            # Take first if multiple matches (unlikely)
-            fname = ([f for f in fnames if f is not None][0]).group(1)
 
-        G = torch.load(f=os.path.join(logdir, fname + "_G.pt"),
-                       map_location=device
-                       )
-        D = torch.load(f=os.path.join(logdir, fname + "_D.pt"),
-                       map_location=device
-                       )
-        if train_Q:
-            Q = torch.load(f=os.path.join(logdir, fname + "_Q.pt"),
+    # Load models
+    if CONT.lower() != "no":
+        try:
+            if CONT == "":
+                # Take last
+                files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
+                epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
+                epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
+                maxEpoch = sorted(epochs, reverse=True, key=int)[0]
+
+                fPrefix = f'epoch{maxEpoch}_step'
+                fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
+                # Take first if multiple matches (unlikely)
+                fname = ([f for f in fnames if f is not None][0]).group(1)
+            else:
+                # parametrized by the epoch
+                fPrefix = f'epoch{CONT}_step'
+                files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
+                fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
+                # Take first if multiple matches (unlikely)
+                fname = ([f for f in fnames if f is not None][0]).group(1)
+
+            G = torch.load(f=os.path.join(logdir, fname + "_G.pt"),
                            map_location=device
                            )
+            D = torch.load(f=os.path.join(logdir, fname + "_D.pt"),
+                           map_location=device
+                           )
+            if train_Q:
+                Q = torch.load(f=os.path.join(logdir, fname + "_Q.pt"),
+                               map_location=device
+                               )
 
-        optimizer_G = torch.load(f=os.path.join(logdir, fname + "_Gopt.pt"),
-               map_location=device
-               )
-        optimizer_D = torch.load(f=os.path.join(logdir, fname + "_Dopt.pt"),
-                       map_location=device
-                       )
-        if train_Q:
-            optimizer_Q = torch.load(f=os.path.join(logdir, fname + "_Qopt.pt"),
+            optimizer_G = torch.load(f=os.path.join(logdir, fname + "_Gopt.pt"),
                                      map_location=device
-                                    )
-            criterion_Q = torch.nn.BCEWithLogitsLoss() if args.fiw else torch.nn.CrossEntropyLoss()
+                                     )
+            optimizer_D = torch.load(f=os.path.join(logdir, fname + "_Dopt.pt"),
+                                     map_location=device
+                                     )
+            if train_Q:
+                optimizer_Q = torch.load(f=os.path.join(logdir, fname + "_Qopt.pt"),
+                                         map_location=device
+                                         )
+                criterion_Q = torch.nn.BCEWithLogitsLoss() if args.fiw else torch.nn.CrossEntropyLoss()
+
+        # Don't care why it failed
+        except Exception:
+            G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+
+    else:
+        G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
