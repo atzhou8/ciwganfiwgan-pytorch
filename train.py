@@ -1,5 +1,7 @@
 import argparse
 import os
+import re
+from builtins import map
 
 import numpy as np
 import torch
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         '--logdir',
         type=str,
         required=True,
-        help='Log Directory'
+        help='Log/Results Directory'
     )
     parser.add_argument(
         '--num_categ',
@@ -97,6 +99,14 @@ if __name__ == "__main__":
         type=int,
         default=64,
         help='Batch size'
+    )
+
+    parser.add_argument(
+        '--continue',
+        type=str,
+        default="",
+        help='''Continue: default from the last saved iteration. No if not desired.'''
+             '''Provide the epoch number if you wish to resume from a specific point'''
     )
 
     # Q-net Arguments
@@ -128,6 +138,9 @@ if __name__ == "__main__":
     BETA1 = 0.5
     BETA2 = 0.9
 
+    CONT = args.
+    continue
+
     # Load data
     dataset = AudioDataSet(datadir, SLICE_LEN)
     dataloader = DataLoader(
@@ -139,27 +152,73 @@ if __name__ == "__main__":
     )
 
     # Load models
-    G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
-    D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
-    if train_Q:
-        Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
+    if CONT.lower() == "no":
+        G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
+        D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
 
-    # Optimizers
-    optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-    optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-    if args.fiw:
-        optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
-        criterion_Q = torch.nn.BCEWithLogitsLoss()
-    elif args.ciw:
-        optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
-        criterion_Q = torch.nn.CrossEntropyLoss()
+        # Optimizers
+        optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+
+        if train_Q:
+            Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
+
+        if args.fiw:
+            optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
+            criterion_Q = torch.nn.BCEWithLogitsLoss()
+        elif args.ciw:
+            optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
+            criterion_Q = torch.nn.CrossEntropyLoss()
+
+    else:
+        if CONT == "":
+            # Take last
+            files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
+            epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
+            epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
+            maxEpoch = sorted(epochs, reverse=True, key=int)[0]
+
+            fPrefix = f'epoch{maxEpoch}_step'
+            fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
+            # Take first if multiple matches (unlikely)
+            fname = ([f for f in fnames if f is not None][0]).group(1)
+        else:
+            # parametrized by the epoch
+            fPrefix = f'epoch{CONT}_step'
+            files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
+            fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
+            # Take first if multiple matches (unlikely)
+            fname = ([f for f in fnames if f is not None][0]).group(1)
+
+        G = torch.load(f=os.path.join(logdir, fname + "_G.pt"),
+                       map_location=device
+                       )
+        D = torch.load(f=os.path.join(logdir, fname + "_D.pt"),
+                       map_location=device
+                       )
+        if train_Q:
+            Q = torch.load(f=os.path.join(logdir, fname + "_Q.pt"),
+                           map_location=device
+                           )
+
+        optimizer_G = torch.load(f=os.path.join(logdir, fname + "_Gopt.pt"),
+               map_location=device
+               )
+        optimizer_D = torch.load(f=os.path.join(logdir, fname + "_Dopt.pt"),
+                       map_location=device
+                       )
+        if train_Q:
+            optimizer_Q = torch.load(f=os.path.join(logdir, fname + "_Qopt.pt"),
+                                     map_location=device
+                                    )
+            criterion_Q = torch.nn.BCEWithLogitsLoss() if args.fiw else torch.nn.CrossEntropyLoss()
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
     step = 0
 
-    for epoch in range(NUM_EPOCHS):
-        print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
+    for maxEpoch in range(NUM_EPOCHS):
+        print("Epoch {} of {}".format(maxEpoch, NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
         real = dataset[:BATCH_SIZE].to(device)
@@ -212,12 +271,12 @@ if __name__ == "__main__":
         #     pk.dump(G, open(os.path.join("./checkpoints", f"generator{epoch}" + ".pkl"), "wb"))
         #     pk.dump(D, open(os.path.join("./checkpoints", f"discriminator{epoch}" + ".pkl"), "wb"))
 
-        torch.save(G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_G.pt'))
-        torch.save(D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_D.pt'))
+        torch.save(G.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_G.pt'))
+        torch.save(D.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_D.pt'))
         if train_Q:
-            torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Q.pt'))
+            torch.save(Q.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Q.pt'))
 
-        torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Gopt.pt'))
-        torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Dopt.pt'))
+        torch.save(optimizer_G.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Gopt.pt'))
+        torch.save(optimizer_D.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Dopt.pt'))
         if train_Q:
-            torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{epoch}_step{step}_Qopt.pt'))
+            torch.save(optimizer_Q.state_dict(), os.path.join(logdir, f'epoch{maxEpoch}_step{step}_Qopt.pt'))
