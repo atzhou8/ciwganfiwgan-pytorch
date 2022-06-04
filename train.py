@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
+from utils import get_continuation_fname
 
 
 class AudioDataSet:
@@ -99,7 +100,6 @@ if __name__ == "__main__":
         default=64,
         help='Batch size'
     )
-
     parser.add_argument(
         '--cont',
         type=str,
@@ -109,10 +109,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-    '--save_int',
-    type=int,
-    default=50,
-    help='Save interval in epochs'
+        '--save_int',
+        type=int,
+        default=50,
+        help='Save interval in epochs'
     )
 
     # Q-net Arguments
@@ -157,7 +157,6 @@ if __name__ == "__main__":
         drop_last=True
     )
 
-
     def make_new():
         G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
@@ -177,65 +176,43 @@ if __name__ == "__main__":
 
         return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
 
-
     # Load models
-    if CONT.lower() != "no":
+    if CONT.lower() != "":
         try:
-            if CONT == "":
-                # Take last
-                files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
-                epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
-                epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
-                maxEpoch = sorted(epochs, reverse=True, key=int)[0]
+            print("Loading model from existing checkpoints...")
+            fname = get_continuation_fname(CONT, logdir)
+            print("Checkpoint found, loading models...")
+            G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
 
-                fPrefix = f'epoch{maxEpoch}_step'
-                fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
-                # Take first if multiple matches (unlikely)
-                fname = ([f for f in fnames if f is not None][0]).group(1)
-            else:
-                # parametrized by the epoch
-                fPrefix = f'epoch{CONT}_step'
-                files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
-                fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
-                # Take first if multiple matches (unlikely)
-                fname = ([f for f in fnames if f is not None][0]).group(1)
+            G.load_state_dict(torch.load(os.path.join(logdir, fname + "_G.pt")))
+            optimizer_G.load_state_dict(torch.load(os.path.join(logdir, fname + "_Gopt.pt")))
+            D.load_state_dict(torch.load(os.path.join(logdir, fname + "_D.pt")))
+            optimizer_D.load_state_dict(torch.load(os.path.join(logdir, fname + "_Dopt.pt")))
 
-            G = torch.load(f=os.path.join(logdir, fname + "_G.pt"),
-                           map_location=device
-                           )
-            D = torch.load(f=os.path.join(logdir, fname + "_D.pt"),
-                           map_location=device
-                           )
             if train_Q:
-                Q = torch.load(f=os.path.join(logdir, fname + "_Q.pt"),
-                               map_location=device
-                               )
-
-            optimizer_G = torch.load(f=os.path.join(logdir, fname + "_Gopt.pt"),
-                                     map_location=device
-                                     )
-            optimizer_D = torch.load(f=os.path.join(logdir, fname + "_Dopt.pt"),
-                                     map_location=device
-                                     )
-            if train_Q:
-                optimizer_Q = torch.load(f=os.path.join(logdir, fname + "_Qopt.pt"),
-                                         map_location=device
-                                         )
-                criterion_Q = torch.nn.BCEWithLogitsLoss() if args.fiw else torch.nn.CrossEntropyLoss()
-
+                Q.load_state_dict(torch.load(os.path.join(logdir, fname + "_Q.pt")))
+                optimizer_Q.load_state_dict(torch.load(os.path.join(logdir, fname + "_Qopt.pt")))
+            _epoch, _step = fname.split('_')
+            start_epoch = int(re.search(r'\d+$', _epoch).group())
+            start_step = int(re.search(r'\d+$', _step).group())
+            print(f"Successfully loaded model. Continuing training from epoch {start_epoch}, step {start_step}")
         # Don't care why it failed
-        except Exception:
+        except Exception as e:
+            print(e)
+            print("Could not load from existing checkpoint, initializing new model...")
             G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
 
     else:
         G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+        start_step = 0
+        start_epoch = 0
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
-    step = 0
+    step = start_step
 
-    for epoch in range(NUM_EPOCHS):
-        print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
+    for epoch in range(start_epoch+1, start_epoch+NUM_EPOCHS):
+        print("Epoch {} of {}".format(epoch, start_epoch + NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
         real = dataset[:BATCH_SIZE].to(device)
