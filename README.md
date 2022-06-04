@@ -18,3 +18,7 @@ python train.py --ciw --num_categ N --datadir training_directory --logdir log_di
 ```
 python train.py --fiw --num_categ N --datadir training_directory --logdir log_directory
 ```
+
+### Continue training from a previous checkpoint
+
+Add `--cont last_epoch` to the end of the training statement
