@@ -104,8 +104,9 @@ if __name__ == "__main__":
         '--cont',
         type=str,
         default="",
-        help='''continue: default from the last saved iteration. No if not desired.'''
+        help='''continue: default from the last saved iteration. '''
              '''Provide the epoch number if you wish to resume from a specific point'''
+             '''Or set "last" to continue from last available'''
     )
 
     parser.add_argument(
@@ -157,12 +158,14 @@ if __name__ == "__main__":
         drop_last=True
     )
 
+
     def make_new():
         G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
+
         # Optimizers
         optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))\
+        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
 
         Q, optimizer_Q, criterion_Q = (None, None, None)
         if train_Q:
@@ -176,42 +179,45 @@ if __name__ == "__main__":
 
         return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
 
+
     # Load models
+    G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+    start_epoch = 0
+    start_step = 0
+
     if CONT.lower() != "":
         try:
             print("Loading model from existing checkpoints...")
-            fname = get_continuation_fname(CONT, logdir)
-            print("Checkpoint found, loading models...")
-            G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+            fname, start_epoch = get_continuation_fname(CONT, logdir)
 
-            G.load_state_dict(torch.load(os.path.join(logdir, fname + "_G.pt")))
-            optimizer_G.load_state_dict(torch.load(os.path.join(logdir, fname + "_Gopt.pt")))
-            D.load_state_dict(torch.load(os.path.join(logdir, fname + "_D.pt")))
-            optimizer_D.load_state_dict(torch.load(os.path.join(logdir, fname + "_Dopt.pt")))
+            G.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_G.pt")))
+            D.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_D.pt")))
+            if train_Q:
+                Q.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Q.pt")))
+
+            optimizer_G.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Gopt.pt")))
+            optimizer_D.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Dopt.pt")))
 
             if train_Q:
-                Q.load_state_dict(torch.load(os.path.join(logdir, fname + "_Q.pt")))
-                optimizer_Q.load_state_dict(torch.load(os.path.join(logdir, fname + "_Qopt.pt")))
-            _epoch, _step = fname.split('_')
-            start_epoch = int(re.search(r'\d+$', _epoch).group())
-            start_step = int(re.search(r'\d+$', _step).group())
-            print(f"Successfully loaded model. Continuing training from epoch {start_epoch}, step {start_step}")
+                optimizer_Q.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Qopt.pt")))
+
+            start_step = int(re.search(r'_step(\d+).*', fname).group(1))
+            print(f"Successfully loaded model. Continuing training from epoch {start_epoch},"
+                  f" step {start_step}")
+
         # Don't care why it failed
         except Exception as e:
-            print(e)
             print("Could not load from existing checkpoint, initializing new model...")
-            G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
-
+            print(e)
     else:
-        G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
-        start_step = 0
-        start_epoch = 0
+        print("Starting a new training")
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
     step = start_step
 
-    for epoch in range(start_epoch+1, start_epoch+NUM_EPOCHS):
+    for epoch in range(start_epoch + 1, start_epoch + NUM_EPOCHS):
+
         print("Epoch {} of {}".format(epoch, start_epoch + NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)

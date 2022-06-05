@@ -21,4 +21,5 @@ python train.py --fiw --num_categ N --datadir training_directory --logdir log_di
 
 ### Continue training from a previous checkpoint
 
-Add `--cont last_epoch` to the end of the training statement
+Add `--cont last` to the end of the training statement to continue from the last found state  
+Add `--cont epoch_number` to continue from the state corresponding to `epoch_number`

@@ -1,13 +1,11 @@
 import os
 import re
-import torch
-import torch.optim as optim
-import numpy as np
 
-from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
 
 def get_continuation_fname(CONT, logdir):
-    if CONT == "":
+    epoch = int(CONT)
+
+    if CONT.lower() == "last":
         # Take last
         files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
         epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
@@ -18,6 +16,9 @@ def get_continuation_fname(CONT, logdir):
         fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
         # Take first if multiple matches (unlikely)
         fname = ([f for f in fnames if f is not None][0]).group(1)
+
+        epoch = int(maxEpoch)
+
     else:
         # parametrized by the epoch
         fPrefix = f'epoch{CONT}_step'
@@ -26,4 +27,4 @@ def get_continuation_fname(CONT, logdir):
         # Take first if multiple matches (unlikely)
         fname = ([f for f in fnames if f is not None][0]).group(1)
 
-    return fname
+    return fname, epoch

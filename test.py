@@ -4,22 +4,18 @@ Author: Andrej Leban
 Created on Sun May 29 13:05:27 2022
 """
 
-import io
-import os
 import argparse
-import pickle as pk
+import os
+import time
 
-# import sounddevice as sd
+import sounddevice as sd
 # import soundfile as sf
 import torch
-import numpy as np
-from scipy.io.wavfile import write
+
 from infowavegan import WaveGANGenerator
 from utils import get_continuation_fname
 
-
 # cf: https://github.com/pytorch/pytorch/issues/16797
-
 # class CPU_Unpickler(pk.Unpickler):
 #     def find_class(self, module, name):
 #         if module == 'torch.storage' and name == '_load_from_bytes':
@@ -29,10 +25,8 @@ from utils import get_continuation_fname
 
 if __name__ == "__main__":
     # generator = CPU_Unpickler(open("generator.pkl", 'rb')).load()
-    #
     # discriminator = CPU_Unpickler(open("discriminator.pkl", 'rb')).load()
-    #
-    # inp, fs = sf.read("../GANdata/8words_train/ask_1.wav")
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dir',
@@ -66,14 +60,16 @@ if __name__ == "__main__":
 
     # Load generator from checkpoint
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    fname = get_continuation_fname(epoch, dir)
+    fname, _ = get_continuation_fname(epoch, dir)
     G = WaveGANGenerator(slice_len=slice_len)
     G.load_state_dict(torch.load(os.path.join(dir, fname + "_G.pt")))
     G.to(device)
     G.eval()
 
     # Generate from random noise
-    z = torch.FloatTensor(1, 100).uniform_(-1, 1).to(device)
-    genData = G(z)[0, 0, :].detach().cpu().numpy()
-    write(f'out.wav', sample_rate, (genData * 32767).astype(np.int16))
-    # sd.play(genData, fs)
+    for i in range(100):
+        z = torch.FloatTensor(1, 100).uniform_(-1, 1).to(device)
+        genData = G(z)[0, 0, :].detach().cpu().numpy()
+        # write(f'out.wav', sample_rate, (genData * 32767).astype(np.int16))
+        sd.play(genData, sample_rate)
+        time.sleep(1)
