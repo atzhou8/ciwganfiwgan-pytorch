@@ -103,16 +103,16 @@ if __name__ == "__main__":
     parser.add_argument(
         '--cont',
         type=str,
-        default="",
+        default="no",
         help='''continue: default from the last saved iteration. No if not desired.'''
              '''Provide the epoch number if you wish to resume from a specific point'''
     )
 
     parser.add_argument(
-    '--save_int',
-    type=int,
-    default=50,
-    help='Save interval in epochs'
+        '--save_int',
+        type=int,
+        default=50,
+        help='Save interval in epochs'
     )
 
     # Q-net Arguments
@@ -161,9 +161,10 @@ if __name__ == "__main__":
     def make_new():
         G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
+
         # Optimizers
         optimizer_G = optim.Adam(G.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))\
+        optimizer_D = optim.Adam(D.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
 
         Q, optimizer_Q, criterion_Q = (None, None, None)
         if train_Q:
@@ -179,6 +180,9 @@ if __name__ == "__main__":
 
 
     # Load models
+    G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+    start_epoch = 0
+
     if CONT.lower() != "no":
         try:
             if CONT == "":
@@ -192,6 +196,8 @@ if __name__ == "__main__":
                 fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
                 # Take first if multiple matches (unlikely)
                 fname = ([f for f in fnames if f is not None][0]).group(1)
+
+                start_epoch = maxEpoch
             else:
                 # parametrized by the epoch
                 fPrefix = f'epoch{CONT}_step'
@@ -200,42 +206,29 @@ if __name__ == "__main__":
                 # Take first if multiple matches (unlikely)
                 fname = ([f for f in fnames if f is not None][0]).group(1)
 
-            G = torch.load(f=os.path.join(logdir, fname + "_G.pt"),
-                           map_location=device
-                           )
-            D = torch.load(f=os.path.join(logdir, fname + "_D.pt"),
-                           map_location=device
-                           )
-            if train_Q:
-                Q = torch.load(f=os.path.join(logdir, fname + "_Q.pt"),
-                               map_location=device
-                               )
+                start_epoch = CONT
 
-            optimizer_G = torch.load(f=os.path.join(logdir, fname + "_Gopt.pt"),
-                                     map_location=device
-                                     )
-            optimizer_D = torch.load(f=os.path.join(logdir, fname + "_Dopt.pt"),
-                                     map_location=device
-                                     )
+            G.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_G.pt")))
+            D.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_D.pt")))
             if train_Q:
-                optimizer_Q = torch.load(f=os.path.join(logdir, fname + "_Qopt.pt"),
-                                         map_location=device
-                                         )
-                criterion_Q = torch.nn.BCEWithLogitsLoss() if args.fiw else torch.nn.CrossEntropyLoss()
+                Q.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Q.pt")))
+
+            optimizer_G.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Gopt.pt")))
+            optimizer_D.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Dopt.pt")))
+
+            if train_Q:
+                optimizer_Q.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_Qopt.pt")))
 
         # Don't care why it failed
-        except Exception:
-            G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
-
-    else:
-        G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
+        except Exception as e:
+            print(e)
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
     step = 0
 
-    for epoch in range(NUM_EPOCHS):
-        print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
+    for epoch in range(start_epoch + 1, start_epoch + NUM_EPOCHS):
+        print("Epoch {} of {}".format(epoch, start_epoch + NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
         real = dataset[:BATCH_SIZE].to(device)
