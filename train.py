@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     if CONT.lower() != "no":
         try:
-            if CONT == "":
+            if CONT.lower() == "last":
                 # Take last
                 print("Continuing from last saved epoch")
 
