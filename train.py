@@ -103,9 +103,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '--cont',
         type=str,
-        default="no",
-        help='''continue: default from the last saved iteration. No if not desired.'''
+        default="",
+        help='''continue: default from the last saved iteration. '''
              '''Provide the epoch number if you wish to resume from a specific point'''
+             '''Or provide "last"'''
     )
 
     parser.add_argument(
@@ -188,7 +189,7 @@ if __name__ == "__main__":
             if CONT == "":
                 # Take last
                 print("Continuing from last saved epoch")
-                
+
                 files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
                 epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
                 epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
@@ -199,18 +200,18 @@ if __name__ == "__main__":
                 # Take first if multiple matches (unlikely)
                 fname = ([f for f in fnames if f is not None][0]).group(1)
 
-                start_epoch = maxEpoch
+                start_epoch = int(maxEpoch)
             else:
                 # parametrized by the epoch
                 print("Continuing from epoch", CONT)
-                
+
                 fPrefix = f'epoch{CONT}_step'
                 files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
                 fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
                 # Take first if multiple matches (unlikely)
                 fname = ([f for f in fnames if f is not None][0]).group(1)
 
-                start_epoch = CONT
+                start_epoch = int(CONT)
 
             G.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_G.pt")))
             D.load_state_dict(torch.load(f=os.path.join(logdir, fname + "_D.pt")))
@@ -226,6 +227,8 @@ if __name__ == "__main__":
         # Don't care why it failed
         except Exception as e:
             print(e)
+    else:
+        print("Starting a new training")
 
     # Set Up Writer
     writer = SummaryWriter(logdir)
