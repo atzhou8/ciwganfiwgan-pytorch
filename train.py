@@ -187,6 +187,8 @@ if __name__ == "__main__":
         try:
             if CONT == "":
                 # Take last
+                print("Continuing from last saved epoch")
+                
                 files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
                 epochNames = [re.match(f"epoch(\d+)_step\d+.*\.pt$", f) for f in files]
                 epochs = [match.group(1) for match in filter(lambda x: x is not None, epochNames)]
@@ -200,6 +202,8 @@ if __name__ == "__main__":
                 start_epoch = maxEpoch
             else:
                 # parametrized by the epoch
+                print("Continuing from epoch", CONT)
+                
                 fPrefix = f'epoch{CONT}_step'
                 files = [f for f in os.listdir(logdir) if os.path.isfile(os.path.join(logdir, f))]
                 fnames = [re.match(f"({re.escape(fPrefix)}\d+).*\.pt$", f) for f in files]
