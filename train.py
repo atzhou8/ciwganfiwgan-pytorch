@@ -184,7 +184,7 @@ if __name__ == "__main__":
     G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
     start_epoch = 0
 
-    if CONT.lower() != "no":
+    if CONT.lower() != "":
         try:
             if CONT.lower() == "last":
                 # Take last
