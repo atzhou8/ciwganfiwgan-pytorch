@@ -62,7 +62,8 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     fname, _ = get_continuation_fname(epoch, dir)
     G = WaveGANGenerator(slice_len=slice_len)
-    G.load_state_dict(torch.load(os.path.join(dir, fname + "_G.pt")))
+    G.load_state_dict(torch.load(os.path.join(dir, fname + "_G.pt"),
+                                 map_location = device))
     G.to(device)
     G.eval()
 
