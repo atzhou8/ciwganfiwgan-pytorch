@@ -216,9 +216,9 @@ if __name__ == "__main__":
     writer = SummaryWriter(logdir)
     step = start_step
 
-    for epoch in range(start_epoch + 1, start_epoch + NUM_EPOCHS):
+    for epoch in range(start_epoch + 1, NUM_EPOCHS):
 
-        print("Epoch {} of {}".format(epoch, start_epoch + NUM_EPOCHS))
+        print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
         real = dataset[:BATCH_SIZE].to(device)
