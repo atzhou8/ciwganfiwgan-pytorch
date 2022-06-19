@@ -154,7 +154,7 @@ if __name__ == "__main__":
         dataset,
         BATCH_SIZE,
         shuffle=True,
-        num_workers=4,
+        num_workers=2,
         drop_last=True
     )
 
