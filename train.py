@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--num_categ',
         type=int,
-        default=1,
+        default=0,
         help='Q-net categories'
     )
     parser.add_argument(
@@ -171,11 +171,11 @@ if __name__ == "__main__":
         if train_Q:
             Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
         if args.fiw:
-            print("Training a fiwGAN")
+            print("Training a fiwGAN with ", NUM_CATEG, " categories.")
             optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
             criterion_Q = torch.nn.BCEWithLogitsLoss()
         elif args.ciw:
-            print("Training a ciwGAN")
+            print("Training a ciwGAN with ", NUM_CATEG, " categories.")
             optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
             criterion_Q = torch.nn.CrossEntropyLoss()
 
