@@ -79,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--num_categ',
         type=int,
-        default=1,
+        default=0,
         help='Q-net categories'
     )
     parser.add_argument(
