@@ -158,7 +158,6 @@ if __name__ == "__main__":
         drop_last=True
     )
 
-
     def make_new():
         G = WaveGANGenerator(slice_len=SLICE_LEN, ).to(device).train()
         D = WaveGANDiscriminator(slice_len=SLICE_LEN).to(device).train()
@@ -180,7 +179,6 @@ if __name__ == "__main__":
             criterion_Q = torch.nn.CrossEntropyLoss()
 
         return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
-
 
     # Load models
     G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q = make_new()
@@ -231,8 +229,17 @@ if __name__ == "__main__":
             real = real.to(device)
             epsilon = torch.rand(BATCH_SIZE, 1, 1).repeat(1, 1, SLICE_LEN).to(device)
             _z = torch.FloatTensor(BATCH_SIZE, 100 - NUM_CATEG).uniform_(-1, 1).to(device)
-            c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
-            z = torch.cat((c, _z), dim=1)
+
+            if train_Q:
+                if args.fiw:
+                    c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
+                else:
+                    c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (1,)),
+                                                    num_classes=NUM_CATEG).to(device)
+                z = torch.cat((c, _z), dim=1)
+            else:
+                z = _z
+
             fake = G(z)
             penalty = gradient_penalty(G, D, real, fake, epsilon)
 
@@ -245,9 +252,19 @@ if __name__ == "__main__":
                 optimizer_G.zero_grad()
                 if train_Q:
                     optimizer_Q.zero_grad()
+
                 _z = torch.FloatTensor(BATCH_SIZE, 100 - NUM_CATEG).uniform_(-1, 1).to(device)
-                c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
-                z = torch.cat((c, _z), dim=1)
+
+                if train_Q:
+                    if args.fiw:
+                        c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
+                    else:
+                        c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (1,)),
+                                                        num_classes=NUM_CATEG).to(device)
+                    z = torch.cat((c, _z), dim=1)
+                else:
+                    z = _z
+
                 G_z = G(z)
 
                 # G Loss
