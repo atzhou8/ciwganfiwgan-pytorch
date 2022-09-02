@@ -176,7 +176,7 @@ if __name__ == "__main__":
         elif args.ciw:
             print("Training a ciwGAN with ", NUM_CATEG, " categories.")
             optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
-            criterion_Q = torch.nn.CrossEntropyLoss()
+            criterion_Q = lambda inpt, target: torch.nn.CrossEntropyLoss()(inpt, target.max(dim=1)[1])
 
         return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
 
@@ -234,9 +234,9 @@ if __name__ == "__main__":
                 if args.fiw:
                     c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
                 else:
-                    # c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
-                    #                                 num_classes=NUM_CATEG).to(device)
-                    c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
+                    c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
+                                                    num_classes=NUM_CATEG).to(device)
+                    # c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
                 z = torch.cat((c, _z), dim=1)
             else:
                 z = _z
@@ -260,9 +260,9 @@ if __name__ == "__main__":
                     if args.fiw:
                         c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
                     else:
-                        # c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
-                        #                                 num_classes=NUM_CATEG).to(device)
-                        c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
+                        c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
+                                                        num_classes=NUM_CATEG).to(device)
+                        # c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
 
                     z = torch.cat((c, _z), dim=1)
                 else:
