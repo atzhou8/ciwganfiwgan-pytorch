@@ -234,8 +234,9 @@ if __name__ == "__main__":
                 if args.fiw:
                     c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
                 else:
-                    c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
-                                                    num_classes=NUM_CATEG).to(device)
+                    # c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
+                    #                                 num_classes=NUM_CATEG).to(device)
+                    c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
                 z = torch.cat((c, _z), dim=1)
             else:
                 z = _z
@@ -259,8 +260,10 @@ if __name__ == "__main__":
                     if args.fiw:
                         c = torch.FloatTensor(BATCH_SIZE, NUM_CATEG).bernoulli_().to(device)
                     else:
-                        c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
-                                                        num_classes=NUM_CATEG).to(device)
+                        # c = torch.nn.functional.one_hot(torch.randint(0, NUM_CATEG, (BATCH_SIZE,)),
+                        #                                 num_classes=NUM_CATEG).to(device)
+                        c = torch.randint(0, NUM_CATEG, (BATCH_SIZE,)).to(device)
+
                     z = torch.cat((c, _z), dim=1)
                 else:
                     z = _z
