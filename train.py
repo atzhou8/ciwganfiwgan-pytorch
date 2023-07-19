@@ -171,11 +171,13 @@ if __name__ == "__main__":
             Q = WaveGANQNetwork(slice_len=SLICE_LEN, num_categ=NUM_CATEG).to(device).train()
         if args.fiw:
             print("Training a fiwGAN with ", NUM_CATEG, " categories.")
-            optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
+            q_params = list(Q.parameters()) + list(G.parameters())
+            optimizer_Q = optim.RMSprop(q_params, lr=LEARNING_RATE)
             criterion_Q = torch.nn.BCEWithLogitsLoss()
         elif args.ciw:
             print("Training a ciwGAN with ", NUM_CATEG, " categories.")
-            optimizer_Q = optim.RMSprop(Q.parameters(), lr=LEARNING_RATE)
+            q_params = list(Q.parameters()) + list(G.parameters())
+            optimizer_Q = optim.RMSprop(q_params, lr=LEARNING_RATE)
             criterion_Q = lambda inpt, target: torch.nn.CrossEntropyLoss()(inpt, target.max(dim=1)[1])
 
         return G, D, optimizer_G, optimizer_D, Q, optimizer_Q, criterion_Q
