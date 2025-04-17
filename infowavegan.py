@@ -195,11 +195,47 @@ class WaveGANDiscriminator(torch.nn.Module):
         self.dim = dim
 
         # Conv Layers
-        self.downconv_0 = DownConv(1, dim, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_1 = DownConv(dim, dim * 2, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_2 = DownConv(dim * 2, dim * 4, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_3 = DownConv(dim * 4, dim * 8, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_4 = DownConv(dim * 8, dim * 16, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
+        self.downconv_0 = DownConv(
+            1,
+            dim,
+            kernel_size = kernel_len,
+            stride=stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_1 = DownConv(
+            dim,
+            dim * 2,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+
+        self.downconv_2 = DownConv(
+            dim * 2,
+            dim * 4,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_3 = DownConv(
+            dim * 4,
+            dim * 8,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_4 = DownConv(
+            dim * 8,
+            dim * 16,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
 
         # Logit
         self.flat_dim = dim * 16 * 16 if slice_len == 16384 else dim * 16 * 64
@@ -227,11 +263,11 @@ class WaveGANQNetwork(WaveGANDiscriminator):
             slice_len=16384,
     ):
         super(WaveGANQNetwork, self).__init__(
-            kernel_len=25,
-            dim=64,
-            stride=4,
-            use_batchnorm=False,
-            phaseshuffle_rad=0
+            kernel_len=kernel_len,
+            dim=dim,
+            stride=stride,
+            use_batchnorm=use_batchnorm,
+            phaseshuffle_rad=phaseshuffle_rad
         )
         self.flat_dim = dim * 16 * 16 if slice_len == 16384 else dim * 16 * 64
         self.fc_out = torch.nn.Linear(self.flat_dim, num_categ)
