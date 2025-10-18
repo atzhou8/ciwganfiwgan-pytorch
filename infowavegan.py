@@ -66,12 +66,19 @@ class DownConv(torch.nn.Module):
         return output
 
     def phaseshuffle(self, x, rad):
+        if rad <= 0:
+            return x
+        b, c, w = x.shape
         phase = np.random.randint(-rad, rad + 1)
-        pad_l = np.max(phase, 0)
-        pad_r = np.max(-phase, 0)
-        shuffle = torch.nn.ReflectionPad1d((pad_l, pad_r))
-        x = shuffle(x)
-        return (x)
+        pad_l = max(phase, 0)
+        pad_r = max(-phase, 0)
+        # pad, then crop back to width w
+        x = F.pad(x, (pad_l, pad_r), mode='reflect')
+        if phase > 0:
+            x = x[:, :, :w]
+        elif phase < 0:
+            x = x[:, :, -w:]
+        return x
 
 
 class WaveGANGenerator(torch.nn.Module):
@@ -247,7 +254,7 @@ class WaveGANDiscriminator(torch.nn.Module):
         output = self.downconv_2(output)
         output = self.downconv_3(output)
         output = self.downconv_4(output)
-        output = self.fc_out(output.view(-1, self.flat_dim))
+        output = self.fc_out(output.reshape(output.size(0), -1))
         return output
 
 
