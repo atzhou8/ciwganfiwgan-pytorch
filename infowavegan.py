@@ -66,12 +66,19 @@ class DownConv(torch.nn.Module):
         return output
 
     def phaseshuffle(self, x, rad):
+        if rad <= 0:
+            return x
+        b, c, w = x.shape
         phase = np.random.randint(-rad, rad + 1)
-        pad_l = np.max(phase, 0)
-        pad_r = np.max(-phase, 0)
-        shuffle = torch.nn.ReflectionPad1d((pad_l, pad_r))
-        x = shuffle(x)
-        return (x)
+        pad_l = max(phase, 0)
+        pad_r = max(-phase, 0)
+        # pad, then crop back to width w
+        x = F.pad(x, (pad_l, pad_r), mode='reflect')
+        if phase > 0:
+            x = x[:, :, :w]
+        elif phase < 0:
+            x = x[:, :, -w:]
+        return x
 
 
 class WaveGANGenerator(torch.nn.Module):
@@ -195,11 +202,47 @@ class WaveGANDiscriminator(torch.nn.Module):
         self.dim = dim
 
         # Conv Layers
-        self.downconv_0 = DownConv(1, dim, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_1 = DownConv(dim, dim * 2, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_2 = DownConv(dim * 2, dim * 4, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_3 = DownConv(dim * 4, dim * 8, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
-        self.downconv_4 = DownConv(dim * 8, dim * 16, kernel_len, stride, use_batchnorm, phaseshuffle_rad)
+        self.downconv_0 = DownConv(
+            1,
+            dim,
+            kernel_size = kernel_len,
+            stride=stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_1 = DownConv(
+            dim,
+            dim * 2,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+
+        self.downconv_2 = DownConv(
+            dim * 2,
+            dim * 4,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_3 = DownConv(
+            dim * 4,
+            dim * 8,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
+        self.downconv_4 = DownConv(
+            dim * 8,
+            dim * 16,
+            kernel_size = kernel_len,
+            stride = stride,
+            use_batchnorm = use_batchnorm,
+            phaseshuffle_rad = phaseshuffle_rad
+        )
 
         # Logit
         self.flat_dim = dim * 16 * 16 if slice_len == 16384 else dim * 16 * 64
@@ -211,7 +254,7 @@ class WaveGANDiscriminator(torch.nn.Module):
         output = self.downconv_2(output)
         output = self.downconv_3(output)
         output = self.downconv_4(output)
-        output = self.fc_out(output.view(-1, self.flat_dim))
+        output = self.fc_out(output.reshape(output.size(0), -1))
         return output
 
 
@@ -227,11 +270,11 @@ class WaveGANQNetwork(WaveGANDiscriminator):
             slice_len=16384,
     ):
         super(WaveGANQNetwork, self).__init__(
-            kernel_len=25,
-            dim=64,
-            stride=4,
-            use_batchnorm=False,
-            phaseshuffle_rad=0
+            kernel_len=kernel_len,
+            dim=dim,
+            stride=stride,
+            use_batchnorm=use_batchnorm,
+            phaseshuffle_rad=phaseshuffle_rad
         )
         self.flat_dim = dim * 16 * 16 if slice_len == 16384 else dim * 16 * 64
         self.fc_out = torch.nn.Linear(self.flat_dim, num_categ)

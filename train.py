@@ -5,6 +5,8 @@ import re
 import numpy as np
 import torch
 import torch.optim as optim
+import torch.nn.functional as F
+
 from scipy.io.wavfile import read
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -13,6 +15,19 @@ from tqdm import tqdm
 from infowavegan import WaveGANGenerator, WaveGANDiscriminator, WaveGANQNetwork
 from utils import get_continuation_fname
 
+
+def pad_to_slice_len(x: torch.Tensor, slice_len: int) -> torch.Tensor:
+    # Accept [T] or [1, T]
+    if x.dim() == 1:
+        x = x.unsqueeze(0)  # -> [1, T]
+    elif x.shape[0] != 1:
+        raise ValueError("Expected shape [1, T] or [T].")
+
+    T = x.size(-1)
+    if T >= slice_len:
+        return x[:, :slice_len]                # crop
+    pad = slice_len - T
+    return F.pad(x, (0, pad))
 
 class AudioDataSet:
     def __init__(self, datadir, slice_len):
@@ -38,9 +53,20 @@ class AudioDataSet:
 
         self.len = len(x)
         self.audio = torch.from_numpy(np.array(x, dtype=np.float32))
+        self.slice_len = slice_len
 
     def __getitem__(self, index):
-        return self.audio[index]
+
+        wav = self.audio[index]
+        L = wav.shape[1]
+
+        start = np.random.randint(0, self.slice_len * .2) # start this far into the wav file
+        cut_wav = wav[0:1,start:L]
+
+        padded_wav = pad_to_slice_len(cut_wav, self.slice_len).float()
+
+
+        return padded_wav
 
     def __len__(self):
         return self.len
@@ -145,6 +171,7 @@ if __name__ == "__main__":
     BETA1 = 0.5
     BETA2 = 0.9
 
+
     CONT = args.cont
     SAVE_INT = args.save_int
 
@@ -154,7 +181,7 @@ if __name__ == "__main__":
         dataset,
         BATCH_SIZE,
         shuffle=True,
-        num_workers=2,
+        num_workers=1,
         drop_last=True
     )
 
@@ -223,12 +250,12 @@ if __name__ == "__main__":
         print("Epoch {} of {}".format(epoch, NUM_EPOCHS))
         print("-----------------------------------------")
         pbar = tqdm(dataloader)
-        real = dataset[:BATCH_SIZE].to(device)
 
         for i, real in enumerate(pbar):
             # D Update
             optimizer_D.zero_grad()
             real = real.to(device)
+
             epsilon = torch.rand(BATCH_SIZE, 1, 1).repeat(1, 1, SLICE_LEN).to(device)
             _z = torch.FloatTensor(BATCH_SIZE, 100 - NUM_CATEG).uniform_(-1, 1).to(device)
 
@@ -274,16 +301,20 @@ if __name__ == "__main__":
                 G_loss = torch.mean(-D(G_z))
                 G_loss.backward(retain_graph=True)
                 writer.add_scalar('Loss/Generator', G_loss.detach().item(), step)
+                optimizer_G.step()
+
 
                 # Q Loss
+
                 if train_Q:
+                    optimizer_Q.zero_grad()
+                    G_z = G(z)
                     Q_loss = criterion_Q(Q(G_z), c)
                     Q_loss.backward()
                     writer.add_scalar('Loss/Q_Network', Q_loss.detach().item(), step)
                     optimizer_Q.step()
 
-                # Update
-                optimizer_G.step()
+
             step += 1
 
         if not epoch % SAVE_INT:
